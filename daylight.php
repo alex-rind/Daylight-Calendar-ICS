@@ -1,7 +1,8 @@
 <?php
 /*
-	ICS Validator: http://severinghaus.org/projects/icv/
-	Another Validator: http://icalvalid.cloudapp.net/
+	based on original code by chrisblakley <https://gearside.com/google-daylight-calendar/>
+	
+	ICS Validator: https://icalendar.org/validator.html
 
 	My favorite time of day is 11-14 minutes after sunset (when calculated with zenith 90.83). The beautiful sunset is just finishing up with its deepest colors and streetlights and other man-made lights are on.
 	This is just about (slightly before) halfway between sunset as calculated above and civil sunset (zenith of 96).
@@ -154,20 +155,28 @@ VERSION:2.0<?php echo "\r\n"; ?>
 PRODID:-//hacksw/handcal//NONSGML v1.0//EN<?php echo "\r\n"; //Could this be updated to Gearside? PRODID:-//Gearside Creative//Daylight//EN ?>
 CALSCALE:GREGORIAN<?php echo "\r\n"; ?>
 METHOD:PUBLISH<?php echo "\r\n"; ?>
-X-WR-CALNAME:Gearside - Daylight<?php echo "\r\n"; ?>
+<?php if ( isset($_GET['loc']) ) : ?>
+X-WR-CALNAME:Sun in <?php echo $_GET['loc']. "\r\n"; ?>
+<?php else: ?>
+X-WR-CALNAME:Sun - Daylight<?php echo "\r\n"; ?>
+<?php endif; ?>
 <?php
 $date = $year-1 . '-01-01'; //Subtract one year so it can carry over at the end of the year/beginning of the year.
 while (strtotime($date) <= strtotime($year-1 . '-12-31') ) :
-	$sunrise = strtotime($date . '+1 year ' . date_sunrise(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, $zenith, $gmt));
-	$sunset = strtotime($date . '+1 year ' . date_sunset(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, $zenith, $gmt));
+	$sunrise = strtotime($date . '+1 year ' . date_sunrise(strtotime($date . '+1 year '), SUNFUNCS_RET_STRING, $lat, $lng, $zenith, $gmt));
+	$sunset = strtotime($date . '+1 year ' . date_sunset(strtotime($date . '+1 year '), SUNFUNCS_RET_STRING, $lat, $lng, $zenith, $gmt));
 
+	$naut_rise_time = date_sunrise(strtotime($date . '+1 year '), SUNFUNCS_RET_STRING, $lat, $lng, 102, $gmt);
+	$sunrise_nautical = strtotime($date . '+1 year ' . ($naut_rise_time == false ? "0:05" : $naut_rise_time));
+	
+	$naut_set_time = date_sunset(strtotime($date . '+1 year '), SUNFUNCS_RET_STRING, $lat, $lng, 102, $gmt);
+	$sunset_nautical = strtotime($date . '+1 year ' . ($naut_set_time == false ? "23:55" : $naut_set_time));
+	
 	if ( $syracuse ) {
 		$sunrise_civil = strtotime($date . '+1 year ' . date_sunrise(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, 96, $gmt));
 		$sunrise_nautical = strtotime($date . '+1 year ' . date_sunrise(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, 102, $gmt));
-		$sunrise_astronomical = strtotime($date . '+1 year ' . date_sunrise(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, 108, $gmt));
 		$sunset_civil = strtotime($date . '+1 year ' . date_sunset(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, 96, $gmt));
 		$sunset_nautical = strtotime($date . '+1 year ' . date_sunset(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, 102, $gmt));
-		$sunset_astronomical = strtotime($date . '+1 year ' . date_sunset(strtotime($date), SUNFUNCS_RET_STRING, $lat, $lng, 108, $gmt));
 	}
 
 	$length = $sunset-$sunrise;
@@ -206,7 +215,7 @@ while (strtotime($date) <= strtotime($year-1 . '-12-31') ) :
 	$last_sync = ( $date == date('Y-m-d', strtotime('Today -1 Year')) && 1==2 ) ? ' [Last Sync]' : '';
 
 	if ( $debug == 1 || array_key_exists('debug', $_GET) ){
-		echo "\r\n------------------\r\n";
+		echo "\r\n<p>------------------\r\n";
 		echo ( $date == date('Y-m-d', strtotime('Today -1 Year')) ) ? "(Today!) " : "";
 		echo "Debug Info\r\n";
 		echo "Last Modified: " . date('l, F j, Y', filemtime(__FILE__)) . "\r\n";
@@ -228,28 +237,36 @@ while (strtotime($date) <= strtotime($year-1 . '-12-31') ) :
 		echo $length_percentile . " Percentile\r\n";
 		echo ( !empty($weather_forecast_summary) )? $weather_forecast_summary : '(No forecast for this date)';
 
-		echo "\r\n";
+		echo "\r\n <p>";
 	}
 ?>
 BEGIN:VEVENT<?php echo "\r\n"; ?>
 CREATED:<?php echo dateToCal(strtotime($date)) . "\r\n"; ?>
-DTSTART:<?php echo dateToCal($sunrise+$gmt_math) . "\r\n"; ?>
-DTEND:<?php echo dateToCal($sunset+$gmt_math) . "\r\n"; ?>
+DTSTART:<?php echo dateToCal($sunrise_nautical+$gmt_math) . "\r\n"; ?>
+DTEND:<?php echo dateToCal($sunrise+$gmt_math) . "\r\n"; ?>
 DTSTAMP:<?php echo dateToCal(time()) . "\r\n"; ?>
 LAST-MODIFIED:<?php echo dateToCal(filemtime(__FILE__)) . "\r\n"; ?>
-UID:<?php echo md5(uniqid(mt_rand(), true)) . "@gearside.com" . "\r\n"; ?>
-<?php if ( $syracuse ) : ?>
-DESCRIPTION:<?php echo escapeString(
-	"Civil: " . date('g:ia', strtotime(date('F j Y g:ia', $sunrise_civil) . ' +' . $dst . ' hours')) . ' to ' . date('g:ia', strtotime(date('F j Y g:ia', $sunset_civil) . ' +' . $dst . ' hours')) . " (There is enough natural sunlight that artificial light may not be required to carry out human activities.) --- " .
-	"Nautical: " . date('g:ia', strtotime(date('F j Y g:ia', $sunrise_nautical) . ' +' . $dst . ' hours')) . ' to ' . date('g:ia', strtotime(date('F j Y g:ia', $sunset_nautical) . ' +' . $dst . ' hours')) . " (The point at which the horizon stops being visible at sea) --- " .
-	"Astronomical: " . date('g:ia', strtotime(date('F j Y g:ia', $sunrise_astronomical) . ' +' . $dst . ' hours')) . ' to ' . date('g:ia', strtotime(date('F j Y g:ia', $sunset_astronomical) . ' +' . $dst . ' hours')) . " (The point when Sun stops being a source of any illumination) --- " . ' [Last Updated: ' . date('l, F j, Y g:ia') . '] ' .
-	"Calendar by Gearside.com") . "\r\n"; //This is for additional information ?>
-<?php else : ?>
-DESCRIPTION:<?php echo escapeString('Daylight calendar by Gearside.com') . "\r\n"; //This is for additional information ?>
+UID:<?php echo md5($date . '_rise', false) . "@gearside.com" . "\r\n"; ?>
+DESCRIPTION:<?php echo escapeString('Day length ' . $hours . 'h ' . $minutes . 'm (' . round($percent, 1) . '%) [' . $length_percentile . ' Percentile].') . "\r\n"; //This is for additional information ?>
+SUMMARY:<?php echo escapeString('Sunrise ' . date('G:i', strtotime(date('F j Y g:ia', $sunrise) . ' +' . $dst . ' hours'))) . "\r\n"; //Shows up in the title of the event ?>
+<?php if ( isset($_GET['loc']) ) : ?>
+LOCATION:<?php echo escapeString($_GET['loc']) . "\r\n"; ?>
 <?php endif; ?>
-URL;VALUE=URI:<?php echo escapeString('http://gearside.com/calendars/daylight.ics') . "\r\n"; ?>
-SUMMARY:<?php echo escapeString($hours . 'h ' . $minutes . 'm (' . round($percent, 1) . '%) [' . $length_percentile . ' Percentile]. Solar noon: ' . date('g:ia', $solar_noon) . '. ' . $weather_forecast_summary . $last_sync) . "\r\n"; //Shows up in the title of the event ?>
-RRULE:FREQ=YEARLY;COUNT=3<?php echo "\r\n"; ?>
+RRULE:FREQ=YEARLY;COUNT=2<?php echo "\r\n"; ?>
+END:VEVENT<?php echo "\r\n"; ?>
+BEGIN:VEVENT<?php echo "\r\n"; ?>
+CREATED:<?php echo dateToCal(strtotime($date)) . "\r\n"; ?>
+DTSTART:<?php echo dateToCal($sunset+$gmt_math) . "\r\n"; ?>
+DTEND:<?php echo dateToCal($sunset_nautical+$gmt_math) . "\r\n"; ?>
+DTSTAMP:<?php echo dateToCal(time()) . "\r\n"; ?>
+LAST-MODIFIED:<?php echo dateToCal(filemtime(__FILE__)) . "\r\n"; ?>
+UID:<?php echo md5($date . '_set', false) . "@gearside.com" . "\r\n"; ?>
+DESCRIPTION:<?php echo escapeString('Daylight calendar based on work by Gearside.com') . "\r\n"; //This is for additional information ?>
+SUMMARY:<?php echo escapeString('Sunset ' . date('G:i', strtotime(date('F j Y g:ia', $sunset) . ' +' . $dst . ' hours'))) . "\r\n"; //Shows up in the title of the event ?>
+<?php if ( isset($_GET['loc']) ) : ?>
+LOCATION:<?php echo escapeString($_GET['loc']) . "\r\n"; ?>
+<?php endif; ?>
+RRULE:FREQ=YEARLY;COUNT=2<?php echo "\r\n"; ?>
 END:VEVENT<?php echo "\r\n"; ?>
 <?php
 $date = date ("Y-m-d", strtotime("+1 day", strtotime($date)));

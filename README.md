@@ -2,7 +2,10 @@
 
 This is a dynamically generated .ics calendar that you can host and subscribe to in Google Calendar, iCal, or other calendar software.
 
-Not only will it provide an event each day with the appropriate sunrise and sunset time, it will show the length of the day in hours/minutes as well as in a percent (of 24 hours) and the solar noon for that day. It will also give a percentile compared to the shortest and longest days of the year!
+This will create two events for each day of the current year:
+- The sunrise event extends from nautical twilight to the given zenith setting.
+- The sunset event extends from the given zenith setting to nautical twilight.
+In the sunrise's description, it will show the length of the day in hours/minutes as well as in a percent (of 24 hours). It will also give a percentile compared to the shortest and longest days of the year!
 
 ## Options
 
@@ -19,13 +22,14 @@ Not only will it provide an event each day with the appropriate sunrise and suns
     
 ## Instructions
 
-- Upload `daylight.php` to your server (or skip this step and use the one hosted on [gearside.com](https://gearside.com/calendars/daylight.php))
+- Upload `daylight.php` to your server.
 - Point your calendar to the file and use query parameters for the options above.
   - Latitude: `lat`
   - Longitude: `lng`
   - GMT: `gmt`
   - Zenith: `z`
   - Year: `year`
+  - Location: `loc` (optional; just displayed)
 
 Use `?debug` to directly view the calendar file in a browser with events more easily readable. Be sure not to use `?debug` when subscribing to your calendar as it does not declare itself as an .ics file with that parameter present.
 
@@ -34,8 +38,11 @@ Use `?debug` to directly view the calendar file in a browser with events more ea
 #### Basic
 `https://gearside.com/calendars/daylight.php?lat=43.1234&lng=-76.1234&gmt=-5`
 
+
 #### Advanced
 `https://gearside.com/calendars/daylight.php?lat=43.1234&lng=-76.1234&gmt=-5&z=108`
+
+`https://localhost:8080/calendars/daylight.php?lat=48.2&lng=16.4&gmt=1&loc=Wien`
 
 ## Notes
 
